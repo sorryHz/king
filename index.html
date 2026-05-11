@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CRM Call Manager v4</title>
+<title>CRM PRO - Data Mapping v5</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
@@ -13,13 +13,32 @@
   --border: #e2e8f0;
   --primary: #007bff;
   --success: #28a745;
+  --danger: #dc3545;
   --text: #1e293b;
   --text-sec: #64748b;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
 
+/* Login Screen Styles */
+#login-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; z-index: 9999;
+  padding: 20px;
+}
+.login-card {
+  background: var(--surface); width: 100%; max-width: 350px;
+  padding: 30px; border-radius: 20px; border: 1px solid var(--border);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center;
+}
+.login-card h2 { margin: 0 0 10px; font-size: 24px; font-weight: 800; }
+.login-card p { color: var(--text-sec); font-size: 14px; margin-bottom: 25px; }
+
+/* Main App Styles */
+#main-app { display: none; }
+
 .app-header { position: sticky; top: 0; background: var(--surface); padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 100; }
+.btn-logout { background: none; border: 1px solid #ddd; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; color: var(--text-sec); }
 .btn-sync { background: var(--success); color: white; border: none; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
 
 .search-bar { background: white; padding: 10px 15px; position: sticky; top: 55px; z-index: 90; border-bottom: 1px solid var(--border); }
@@ -37,139 +56,178 @@ body { font-family: -apple-system, sans-serif; background: var(--bg); color: var
 
 .panel { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: flex-end; z-index: 2000; }
 .panel.active { display: flex; }
-.panel-content { background: white; width: 100%; max-height: 94vh; border-top-left-radius: 25px; border-top-right-radius: 25px; overflow-y: auto; padding: 25px; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); }
+.panel-content { background: white; width: 100%; max-height: 94vh; border-top-left-radius: 25px; border-top-right-radius: 25px; overflow-y: auto; padding: 25px; }
 
 .form-group { margin-bottom: 18px; }
-label { display: block; font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+label { display: block; font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; }
 input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 15px; background: #fff; }
 .btn-save { width: 100%; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 16px; margin-top: 15px; }
-
 .fab { position: fixed; right: 20px; bottom: 30px; width: 60px; height: 60px; background: var(--primary); border-radius: 30px; display: flex; align-items: center; justify-content: center; color: white; font-size: 30px; border: none; box-shadow: 0 5px 15px rgba(0,123,255,0.4); z-index: 999; }
 </style>
 </head>
 <body>
 
-<header class="app-header">
-  <div style="font-weight: 800; font-size: 20px; letter-spacing: -0.5px;">CRM PRO</div>
-  <button class="btn-sync" onclick="syncData()">🔄 Sync Sheet</button>
-</header>
-
-<div class="search-bar">
-  <input type="text" class="search-input" id="search" placeholder="🔍 ค้นหาชื่อลูกค้า, เบอร์ หรือสถานที่..." oninput="renderList()">
+<div id="login-screen">
+  <div class="login-card">
+    <h2>CRM Login</h2>
+    <p>กรุณาเข้าสู่ระบบเพื่อใช้งาน</p>
+    <div class="form-group" style="text-align:left">
+      <label>Username</label>
+      <input type="text" id="user-input" placeholder="admin">
+    </div>
+    <div class="form-group" style="text-align:left">
+      <label>Password</label>
+      <input type="password" id="pass-input" placeholder="1234">
+    </div>
+    <button class="btn-save" onclick="handleLogin()">เข้าสู่ระบบ</button>
+    <p id="login-error" style="color:red; margin-top:15px; display:none;">❌ รหัสผ่านไม่ถูกต้อง</p>
+  </div>
 </div>
 
-<main class="container" id="list-container"></main>
+<div id="main-app">
+  <header class="app-header">
+    <button class="btn-logout" onclick="handleLogout()">🚪 Logout</button>
+    <div style="font-weight: 800; font-size: 18px;">CRM PRO</div>
+    <button class="btn-sync" onclick="syncData()">🔄 Sync</button>
+  </header>
 
-<button class="fab" onclick="openAdd()">＋</button>
+  <div class="search-bar">
+    <input type="text" class="search-input" id="search" placeholder="🔍 ค้นหาชื่อลูกค้า หรือข้อมูลอื่นๆ..." oninput="renderList()">
+  </div>
 
-<div class="panel" id="form-panel">
-  <div class="panel-content">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
-      <h2 id="form-title" style="margin:0; font-size:20px; font-weight:800;">ข้อมูลลูกค้า</h2>
-      <button onclick="closePanel()" style="border:none; background:#f1f5f9; width:35px; height:35px; border-radius:20px; font-weight:bold;">✕</button>
-    </div>
-    <div id="form-body">
-      <!-- สลับตำแหน่งตามที่ต้องการ -->
-      <div class="form-group"><label>ชื่อลูกค้า</label><input type="text" id="f-name"></div>
-      <div class="form-group"><label>No. (ลำดับ)</label><input type="text" id="f-number"></div>
-      <div class="form-group"><label>ชื่อเล่น / ตำแหน่ง / ชื่อใน Line</label><input type="text" id="f-nick"></div>
-      
-      <div class="form-group"><label>โทรศัพท์</label><input type="tel" id="f-phone"></div>
-      <div class="form-group"><label>อีเมล</label><input type="email" id="f-email"></div>
-      <div class="form-group"><label>สถานที่/บริษัทที่ติดตั้ง</label><input type="text" id="f-location"></div>
-      <div class="form-group"><label>เวลาที่สะดวกให้ติดต่อกลับ</label><input type="text" id="f-avail"></div>
-      <div class="form-group"><label>เศษอาหาร (กก./วัน)</label><input type="text" id="f-waste"></div>
-      <div class="form-group"><label>แบบฟอร์ม</label><input type="text" id="f-formType"></div>
-      
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:15px; border-radius:12px; margin-bottom:15px;">
-        <div class="form-group" style="margin:0;"><label>Status</label>
-          <select id="f-status">
-            <option>Not Contacted</option>
-            <option>Pending</option>
-            <option>Contacted</option>
-          </select>
+  <main class="container" id="list-container"></main>
+
+  <button class="fab" onclick="openAdd()">＋</button>
+
+  <div class="panel" id="form-panel">
+    <div class="panel-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
+        <h2 id="form-title" style="margin:0; font-size:20px; font-weight:800;">ข้อมูลลูกค้า</h2>
+        <button onclick="closePanel()" style="border:none; background:#f1f5f9; width:35px; height:35px; border-radius:20px;">✕</button>
+      </div>
+      <div id="form-body">
+        <div class="form-group"><label>ชื่อลูกค้า (จาก Col C)</label><input type="text" id="f-name"></div>
+        <div class="form-group"><label>ชื่อเล่น / ตำแหน่ง / ชื่อใน Line (จาก Col D)</label><input type="text" id="f-nick"></div>
+        <div class="form-group"><label>No. (ลำดับ จาก Col A)</label><input type="text" id="f-number"></div>
+        <div class="form-group"><label>ข้อมูลคอลัมน์ B</label><input type="text" id="f-colB"></div>
+        
+        <div class="form-group"><label>โทรศัพท์</label><input type="tel" id="f-phone"></div>
+        <div class="form-group"><label>อีเมล</label><input type="email" id="f-email"></div>
+        <div class="form-group"><label>สถานที่/บริษัทที่ติดตั้ง</label><input type="text" id="f-location"></div>
+        <div class="form-group"><label>เวลาที่สะดวกให้ติดต่อกลับ</label><input type="text" id="f-avail"></div>
+        <div class="form-group"><label>เศษอาหาร (กก./วัน)</label><input type="text" id="f-waste"></div>
+        <div class="form-group"><label>แบบฟอร์ม</label><input type="text" id="f-formType"></div>
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:15px; border-radius:12px; margin-bottom:15px;">
+          <div class="form-group" style="margin:0;"><label>Status</label>
+            <select id="f-status">
+              <option>Not Contacted</option>
+              <option>Pending</option>
+              <option>Contacted</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;"><label>Result</label><input type="text" id="f-result"></div>
         </div>
-        <div class="form-group" style="margin:0;"><label>Result</label><input type="text" id="f-result"></div>
+        
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+          <div class="form-group" style="flex:1;"><label>โทร (T)</label><input type="number" id="f-callT"></div>
+          <div class="form-group" style="flex:1;"><label>โทร (K)</label><input type="number" id="f-callK"></div>
+        </div>
+        
+        <div class="form-group"><label>Feedback / บันทึกการคุย</label><textarea id="f-feedback" rows="3"></textarea></div>
+        <div class="form-group"><label>Process</label><textarea id="f-process" rows="2"></textarea></div>
+        <div class="form-group"><label>Strategy</label><textarea id="f-strategy" rows="2"></textarea></div>
+        <div class="form-group"><label>Following 1</label><input type="text" id="f-follow1"></div>
+        <div class="form-group"><label>Following 3</label><input type="text" id="f-follow3"></div>
+        <div class="form-group"><label>คอลัมน์ 2</label><input type="text" id="f-col2"></div>
       </div>
-
-      <div style="display:flex; gap:10px; margin-bottom:15px;">
-        <div class="form-group" style="flex:1;"><label>โทร (T)</label><input type="number" id="f-callT"></div>
-        <div class="form-group" style="flex:1;"><label>โทร (K)</label><input type="number" id="f-callK"></div>
-      </div>
-
-      <div class="form-group"><label>Feedback / บันทึกการคุย</label><textarea id="f-feedback" rows="3"></textarea></div>
-      <div class="form-group"><label>Process</label><textarea id="f-process" rows="2"></textarea></div>
-      <div class="form-group"><label>Strategy</label><textarea id="f-strategy" rows="2"></textarea></div>
-      <div class="form-group"><label>Following 1</label><input type="text" id="f-follow1"></div>
-      <div class="form-group"><label>Following 3</label><input type="text" id="f-follow3"></div>
-      <div class="form-group"><label>คอลัมน์ 2</label><input type="text" id="f-col2"></div>
+      <button class="btn-save" onclick="saveData()">💾 บันทึกข้อมูล</button>
+      <div style="height:40px;"></div>
     </div>
-    <button class="btn-save" onclick="saveData()">💾 บันทึกข้อมูล</button>
-    <div style="height:40px;"></div>
   </div>
 </div>
 
 <script>
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtcZRcAr_uWdYxo3WhB3RkneaWm7auhlMyjlAPoMzrLxFxqN1JmcjP0MHyz8fiCeEbTbxwCVEEqUmW/pub?gid=0&single=true&output=csv';
+// --- Auth ---
+const AUTH_CONFIG = { user: 'admin', pass: '1234' };
+function handleLogin() {
+  const u = document.getElementById('user-input').value;
+  const p = document.getElementById('pass-input').value;
+  if (u === AUTH_CONFIG.user && p === AUTH_CONFIG.pass) {
+    sessionStorage.setItem('isLoggedIn', 'true');
+    checkAuth();
+  } else { document.getElementById('login-error').style.display = 'block'; }
+}
+function handleLogout() { sessionStorage.removeItem('isLoggedIn'); location.reload(); }
+function checkAuth() {
+  if (sessionStorage.getItem('isLoggedIn') === 'true') {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    renderList();
+  }
+}
 
-let DB = JSON.parse(localStorage.getItem('crm_v4_data')) || [];
+// --- Data & Sync ---
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtcZRcAr_uWdYxo3WhB3RkneaWm7auhlMyjlAPoMzrLxFxqN1JmcjP0MHyz8fiCeEbTbxwCVEEqUmW/pub?gid=0&single=true&output=csv';
+let DB = JSON.parse(localStorage.getItem('crm_v5_data')) || [];
 let editingId = null;
 
 async function syncData() {
-  if(!confirm('ดึงข้อมูลจาก Google Sheet?')) return;
+  if(!confirm('ดึงข้อมูลจาก Google Sheet? ข้อมูลเดิมในแอปจะถูกเขียนทับ')) return;
   try {
     const res = await fetch(CSV_URL);
     const text = await res.text();
     const rows = text.split('\n').slice(1);
-
+    
     DB = rows.map((row, i) => {
       const c = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-      if (c.length < 2) return null;
+      if (c.length < 4) return null;
+      
+      // การ Mapping ใหม่ตามคำขอ
       return {
         id: Date.now() + i,
         number: clean(c[0]),   // Col A
-        name: clean(c[1]),     // Col B
-        nick: clean(c[2]),     // Col C
-        process: clean(c[3]),
-        strategy: clean(c[4]),
-        phone: clean(c[5]),
-        formType: clean(c[6]),
-        waste: clean(c[7]),
-        location: clean(c[8]),
-        avail: clean(c[9]),
-        email: clean(c[10]),
-        status: clean(c[11]) || 'Not Contacted',
-        result: clean(c[12]),
-        callT: parseInt(c[13]) || 0,
-        callK: parseInt(c[14]) || 0,
-        feedback: clean(c[16]),
-        col2: clean(c[17]),
-        follow1: clean(c[18]),
-        follow3: clean(c[19])
+        colB: clean(c[1]),     // Col B (เก็บไว้ดูเผื่อเลือก)
+        name: clean(c[2]),     // Col C -> ให้เป็น "ชื่อลูกค้า"
+        nick: clean(c[3]),     // Col D -> ให้เป็น "ชื่อเล่น/ตำแหน่ง/Line"
+        process: clean(c[4]),  // Col E
+        strategy: clean(c[5]), // Col F
+        phone: clean(c[6]),    // Col G
+        formType: clean(c[7]), // Col H
+        waste: clean(c[8]),    // Col I
+        location: clean(c[9]), // Col J
+        avail: clean(c[10]),   // Col K
+        email: clean(c[11]),   // Col L
+        status: clean(c[12]) || 'Not Contacted', // Col M
+        result: clean(c[13]),  // Col N
+        callT: parseInt(c[14]) || 0, // Col O
+        callK: parseInt(c[15]) || 0, // Col P
+        feedback: clean(c[17]), // Col R (ข้าม Totals ที่ Q)
+        col2: clean(c[18]),    // Col S
+        follow1: clean(c[19]), // Col T
+        follow3: clean(c[20])  // Col U
       };
     }).filter(x => x !== null);
-
-    saveDB();
-    renderList();
-    alert('สำเร็จ! พบข้อมูล ' + DB.length + ' รายการ');
+    
+    saveDB(); renderList(); alert('สำเร็จ! ดึงข้อมูลมา ' + DB.length + ' รายการ');
   } catch (e) { alert('ข้อผิดพลาด: ' + e.message); }
 }
 
 function clean(s) { return s ? s.replace(/"/g, '').trim() : ''; }
-function saveDB() { localStorage.setItem('crm_v4_data', JSON.stringify(DB)); }
+function saveDB() { localStorage.setItem('crm_v5_data', JSON.stringify(DB)); }
 
 function renderList() {
   const q = document.getElementById('search').value.toLowerCase();
   const container = document.getElementById('list-container');
-  const filtered = DB.filter(r => (r.name+r.phone+r.location+r.number).toLowerCase().includes(q));
+  const filtered = DB.filter(r => (r.name+r.nick+r.phone+r.location).toLowerCase().includes(q));
   
   container.innerHTML = filtered.map(r => `
     <div class="customer-item" onclick="openEdit(${r.id})">
       <div style="flex:1">
-        <div class="cust-name">${r.name || 'ไม่มีชื่อ'}</div>
+        <div class="cust-name">${r.name || 'ไม่มีชื่อ (Col C)'}</div>
         <div class="cust-info">
+          👤 ${r.nick || '-'}<br>
           🆔 ลำดับ: ${r.number || '-'}<br>
-          👤 ชื่อใน Line: ${r.nick || '-'}<br>
           📍 ${r.location || '-'}<br>
           📞 ${r.phone || '-'}
         </div>
@@ -190,8 +248,9 @@ function openEdit(id) {
   editingId = id;
   const r = DB.find(x => x.id === id);
   document.getElementById('f-name').value = r.name || '';
-  document.getElementById('f-number').value = r.number || '';
   document.getElementById('f-nick').value = r.nick || '';
+  document.getElementById('f-number').value = r.number || '';
+  document.getElementById('f-colB').value = r.colB || '';
   document.getElementById('f-phone').value = r.phone || '';
   document.getElementById('f-email').value = r.email || '';
   document.getElementById('f-location').value = r.location || '';
@@ -224,8 +283,9 @@ function saveData() {
   const data = {
     id: editingId || Date.now(),
     name: document.getElementById('f-name').value,
-    number: document.getElementById('f-number').value,
     nick: document.getElementById('f-nick').value,
+    number: document.getElementById('f-number').value,
+    colB: document.getElementById('f-colB').value,
     phone: document.getElementById('f-phone').value,
     email: document.getElementById('f-email').value,
     location: document.getElementById('f-location').value,
@@ -246,13 +306,11 @@ function saveData() {
   if(editingId) {
     const idx = DB.findIndex(x => x.id === editingId);
     DB[idx] = data;
-  } else {
-    DB.unshift(data);
-  }
+  } else { DB.unshift(data); }
   saveDB(); renderList(); closePanel();
 }
 
-renderList();
+checkAuth();
 </script>
 </body>
 </html>
