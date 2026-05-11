@@ -1,21 +1,9 @@
-จัดการปรับลำดับและเปลี่ยนชื่อหัวข้อใหม่ตามที่คุณต้องการเรียบร้อยครับ
-โดยโครงสร้างใหม่จะเป็นดังนี้:
-
-1.  No. (ลำดับ) - (เปลี่ยนจากช่องชื่อเดิม)
-2.  ชื่อลูกค้า - (เปลี่ยนจากช่องชื่อเล่นเดิม)
-3.  ชื่อเล่น / ตำแหน่ง / ชื่อใน Line - (เพิ่มเป็นช่องใหม่)
-
-และได้ปรับการเชื่อมข้อมูล (Sync) ให้ตรงกับคอลัมน์ A, B และ C ของ Google Sheet
-ให้ถูกต้องด้วยครับ
-
-โค้ดฉบับแก้ไข:
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CRM Call Manager v3</title>
+<title>CRM Call Manager v4</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
@@ -81,9 +69,9 @@ input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1;
       <button onclick="closePanel()" style="border:none; background:#f1f5f9; width:35px; height:35px; border-radius:20px; font-weight:bold;">✕</button>
     </div>
     <div id="form-body">
-      <!-- ส่วนที่ปรับเปลี่ยนใหม่ตามคำขอ -->
-      <div class="form-group"><label>No. (ลำดับ)</label><input type="text" id="f-number"></div>
+      <!-- สลับตำแหน่งตามที่ต้องการ -->
       <div class="form-group"><label>ชื่อลูกค้า</label><input type="text" id="f-name"></div>
+      <div class="form-group"><label>No. (ลำดับ)</label><input type="text" id="f-number"></div>
       <div class="form-group"><label>ชื่อเล่น / ตำแหน่ง / ชื่อใน Line</label><input type="text" id="f-nick"></div>
       
       <div class="form-group"><label>โทรศัพท์</label><input type="tel" id="f-phone"></div>
@@ -124,11 +112,11 @@ input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1;
 <script>
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtcZRcAr_uWdYxo3WhB3RkneaWm7auhlMyjlAPoMzrLxFxqN1JmcjP0MHyz8fiCeEbTbxwCVEEqUmW/pub?gid=0&single=true&output=csv';
 
-let DB = JSON.parse(localStorage.getItem('crm_v3_data')) || [];
+let DB = JSON.parse(localStorage.getItem('crm_v4_data')) || [];
 let editingId = null;
 
 async function syncData() {
-  if(!confirm('ดึงข้อมูลจาก Google Sheet? ข้อมูลเดิมจะถูกเขียนทับ')) return;
+  if(!confirm('ดึงข้อมูลจาก Google Sheet?')) return;
   try {
     const res = await fetch(CSV_URL);
     const text = await res.text();
@@ -139,9 +127,9 @@ async function syncData() {
       if (c.length < 2) return null;
       return {
         id: Date.now() + i,
-        number: clean(c[0]),   // คอลัมน์ A (Column 1)
-        name: clean(c[1]),     // คอลัมน์ B (ชื่อ)
-        nick: clean(c[2]),     // คอลัมน์ C (ชื่อเล่น/ตำแหน่ง)
+        number: clean(c[0]),   // Col A
+        name: clean(c[1]),     // Col B
+        nick: clean(c[2]),     // Col C
         process: clean(c[3]),
         strategy: clean(c[4]),
         phone: clean(c[5]),
@@ -168,7 +156,7 @@ async function syncData() {
 }
 
 function clean(s) { return s ? s.replace(/"/g, '').trim() : ''; }
-function saveDB() { localStorage.setItem('crm_v3_data', JSON.stringify(DB)); }
+function saveDB() { localStorage.setItem('crm_v4_data', JSON.stringify(DB)); }
 
 function renderList() {
   const q = document.getElementById('search').value.toLowerCase();
@@ -178,16 +166,16 @@ function renderList() {
   container.innerHTML = filtered.map(r => `
     <div class="customer-item" onclick="openEdit(${r.id})">
       <div style="flex:1">
-        <div style="font-size:11px; color:var(--primary); font-weight:bold;">No. ${r.number || '-'}</div>
         <div class="cust-name">${r.name || 'ไม่มีชื่อ'}</div>
         <div class="cust-info">
-          👤 ${r.nick || '-'}<br>
+          🆔 ลำดับ: ${r.number || '-'}<br>
+          👤 ชื่อใน Line: ${r.nick || '-'}<br>
           📍 ${r.location || '-'}<br>
           📞 ${r.phone || '-'}
         </div>
         <span class="badge ${getBadge(r.status)}">${r.status}</span>
       </div>
-      <div style="color:#cbd5e1; font-weight:bold;">❯</div>
+      <div style="color:#cbd5e1;">❯</div>
     </div>
   `).join('');
 }
@@ -201,8 +189,8 @@ function getBadge(s) {
 function openEdit(id) {
   editingId = id;
   const r = DB.find(x => x.id === id);
-  document.getElementById('f-number').value = r.number || '';
   document.getElementById('f-name').value = r.name || '';
+  document.getElementById('f-number').value = r.number || '';
   document.getElementById('f-nick').value = r.nick || '';
   document.getElementById('f-phone').value = r.phone || '';
   document.getElementById('f-email').value = r.email || '';
@@ -235,8 +223,8 @@ function closePanel() { document.getElementById('form-panel').classList.remove('
 function saveData() {
   const data = {
     id: editingId || Date.now(),
-    number: document.getElementById('f-number').value,
     name: document.getElementById('f-name').value,
+    number: document.getElementById('f-number').value,
     nick: document.getElementById('f-nick').value,
     phone: document.getElementById('f-phone').value,
     email: document.getElementById('f-email').value,
