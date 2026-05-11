@@ -61,14 +61,19 @@ body { font-family: -apple-system, sans-serif; background: var(--bg); color: var
 .nav-icon { font-size: 22px; }
 
 /* List Styles */
-.customer-item { background: var(--surface); padding: 16px; border-radius: 16px; margin-bottom: 12px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.customer-item { background: var(--surface); padding: 16px; border-radius: 16px; margin-bottom: 12px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.customer-item:active { background: #f1f5f9; }
 .badge { padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-top: 8px; display: inline-block; }
 .b-contacted { background: #dcfce7; color: #166534; }
 .b-pending { background: #fef9c3; color: #854d0e; }
 .b-not { background: #fee2e2; color: #991b1b; }
 
+/* Form Styles */
+#form-body label { display: block; font-size: 12px; font-weight: 700; color: var(--text-sec); margin-bottom: 5px; margin-top: 15px; }
+#form-body input, #form-body select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: #f9fafb; font-size: 15px; outline: none; }
+
 /* Helpers */
-.btn-primary { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; width: 100%; cursor: pointer; }
+.btn-primary { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 700; width: 100%; cursor: pointer; font-size: 16px; }
 .btn-sync { background: var(--success); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .fab { position: fixed; right: 20px; bottom: 85px; width: 56px; height: 56px; background: var(--text); border-radius: 28px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99; }
 </style>
@@ -141,17 +146,43 @@ body { font-family: -apple-system, sans-serif; background: var(--bg); color: var
   </nav>
 
   <!-- Modal Form -->
-  <div id="form-panel" class="panel" style="position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:flex-end; z-index:2000;">
-    <div style="background:white; width:100%; max-height:92vh; border-radius:25px 25px 0 0; padding:25px; overflow-y:auto;">
-      <div style="display:flex; justify-content:space-between; margin-bottom:20px"><h2 id="form-title" style="margin:0">ข้อมูลลูกค้า</h2><button onclick="closePanel()">✕</button></div>
-      <div id="form-body">
-        <label>ชื่อลูกค้า</label><input type="text" id="f-name">
-        <label>DD/MM/YYYY</label><input type="text" id="f-number">
-        <label>ลำดับ</label><input type="text" id="f-colB">
-        <label>Status</label><select id="f-status"><option>Not Contacted</option><option>Pending</option><option>Contacted</option></select>
-        <label>Result</label><input type="text" id="f-result">
+  <div id="form-panel" style="position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:flex-end; z-index:2000;">
+    <div style="background:white; width:100%; max-height:92vh; border-radius:25px 25px 0 0; padding:25px; overflow-y:auto; position:relative;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px">
+        <h2 id="form-title" style="margin:0">ข้อมูลลูกค้า</h2>
+        <button onclick="closePanel()" style="background:#eee; border:none; width:30px; height:30px; border-radius:15px; font-weight:bold">✕</button>
       </div>
-      <button class="btn-primary" onclick="saveData()" style="margin-top:20px">💾 บันทึก</button>
+      <div id="form-body">
+        <input type="hidden" id="f-id">
+        <label>ชื่อลูกค้า</label>
+        <input type="text" id="f-name" placeholder="ระบุชื่อ-นามสกุล">
+        
+        <label>วันที่ (DD/MM/YYYY)</label>
+        <input type="text" id="f-number" placeholder="01/01/2024">
+        
+        <label>ลำดับ/คอลัมน์ B</label>
+        <input type="text" id="f-colB" placeholder="ระบุลำดับ">
+        
+        <label>สถานะ (Status)</label>
+        <select id="f-status">
+          <option value="Not Contacted">Not Contacted</option>
+          <option value="Pending">Pending</option>
+          <option value="Contacted">Contacted</option>
+        </select>
+        
+        <label>ผลลัพธ์ (Result)</label>
+        <select id="f-result-select">
+          <option value="">-- เลือกผลลัพธ์ --</option>
+          <option value="Potential Lead">Potential Lead</option>
+          <option value="Contact Today">Contact Today</option>
+          <option value="Contact Again">Contact Again</option>
+          <option value="No Potential">No Potential</option>
+        </select>
+        <input type="text" id="f-result-custom" placeholder="หรือระบุผลลัพธ์อื่นๆ" style="margin-top:8px">
+      </div>
+      <div style="margin-top:30px; display:flex; gap:10px">
+        <button class="btn-primary" onclick="saveData()">💾 บันทึกข้อมูล</button>
+      </div>
     </div>
   </div>
 </div>
@@ -159,7 +190,10 @@ body { font-family: -apple-system, sans-serif; background: var(--bg); color: var
 <script>
 const AUTH = { user: 'admin', pass: '1234' };
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtcZRcAr_uWdYxo3WhB3RkneaWm7auhlMyjlAPoMzrLxFxqN1JmcjP0MHyz8fiCeEbTbxwCVEEqUmW/pub?gid=0&single=true&output=csv';
+
+// โหลดข้อมูลจาก LocalStorage หรือตั้งเป็นอาเรย์ว่าง
 let DB = JSON.parse(localStorage.getItem('crm_v8_data')) || [];
+let currentEditId = null;
 
 function handleLogin() {
   if (document.getElementById('user-input').value === AUTH.user && document.getElementById('pass-input').value === AUTH.pass) {
@@ -187,7 +221,7 @@ function showPage(page) {
 }
 
 async function syncData() {
-  if(!confirm('ดึงข้อมูลใหม่จาก Sheet?')) return;
+  if(!confirm('ต้องการดึงข้อมูลใหม่จาก Google Sheet ใช่หรือไม่? (ข้อมูลที่แก้ไขในแอปแต่ยังไม่ได้ส่งขึ้น Sheet อาจหายไป)')) return;
   try {
     const res = await fetch(CSV_URL);
     const text = await res.text();
@@ -202,13 +236,17 @@ async function syncData() {
         result: clean(c[13]), callT: parseInt(c[14])||0, callK: parseInt(c[15])||0
       };
     }).filter(x => x !== null);
-    localStorage.setItem('crm_v8_data', JSON.stringify(DB));
+    saveDB();
     renderAll();
     alert('Sync สำเร็จ!');
   } catch (e) { alert('Error: ' + e.message); }
 }
 
 function clean(s) { return s ? s.replace(/"/g, '').trim() : ''; }
+
+function saveDB() {
+  localStorage.setItem('crm_v8_data', JSON.stringify(DB));
+}
 
 function renderAll() {
   renderList();
@@ -217,14 +255,24 @@ function renderAll() {
 
 function renderList() {
   const q = document.getElementById('search').value.toLowerCase();
-  const filtered = DB.filter(r => (r.name+r.number).toLowerCase().includes(q));
+  const filtered = DB.filter(r => (r.name + r.number).toLowerCase().includes(q));
   document.getElementById('total-badge').textContent = filtered.length + ' รายการ';
-  document.getElementById('list-container').innerHTML = filtered.map(r => `
-    <div class="customer-item" onclick="alert('${r.name}')">
+  
+  const container = document.getElementById('list-container');
+  if (filtered.length === 0) {
+    container.innerHTML = '<p style="text-align:center; color:gray; margin-top:20px;">ไม่พบข้อมูล</p>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(r => `
+    <div class="customer-item" onclick="editItem(${r.id})">
       <div>
-        <div class="cust-name">${r.name}</div>
-        <div style="font-size:12px; color:var(--text-sec)">📅 ${r.number} | 🔢 ${r.colB}</div>
-        <span class="badge ${r.status==='Contacted'?'b-contacted':r.status==='Pending'?'b-pending':'b-not'}">${r.status}</span>
+        <div style="font-weight:700; font-size:16px;">${r.name}</div>
+        <div style="font-size:12px; color:var(--text-sec); margin-top:2px;">📅 ${r.number} | 🔢 ลำดับ: ${r.colB}</div>
+        <div style="display:flex; gap:5px; align-items:center">
+            <span class="badge ${r.status==='Contacted'?'b-contacted':r.status==='Pending'?'b-pending':'b-not'}">${r.status}</span>
+            ${r.result ? `<span style="font-size:10px; color:var(--text-sec); margin-top:8px;">• ${r.result}</span>` : ''}
+        </div>
       </div>
       <div style="font-weight:bold; color:var(--primary)">❯</div>
     </div>
@@ -232,38 +280,35 @@ function renderList() {
 }
 
 function renderDashboard() {
-  const total = DB.length || 1;
+  const total = DB.length || 0;
   const contacted = DB.filter(r => r.status === 'Contacted').length;
   const pending = DB.filter(r => r.status === 'Pending').length;
   const notContacted = DB.filter(r => r.status === 'Not Contacted').length;
   const potential = DB.filter(r => r.result === 'Potential Lead').length;
-  const calls = DB.reduce((sum, r) => sum + r.callT + r.callK, 0);
+  const calls = DB.reduce((sum, r) => sum + (r.callT || 0) + (r.callK || 0), 0);
 
-  // Update Metrics
-  document.getElementById('dash-total').textContent = DB.length;
+  document.getElementById('dash-total').textContent = total;
   document.getElementById('dash-contacted').textContent = contacted;
   document.getElementById('dash-pending').textContent = pending;
   document.getElementById('dash-not').textContent = notContacted;
   document.getElementById('dash-potential').textContent = potential;
   document.getElementById('dash-calls').textContent = calls;
 
-  // Status Bars
   document.getElementById('status-bars').innerHTML = `
-    ${createBar('Contacted', contacted, DB.length, '#059669')}
-    ${createBar('Pending', pending, DB.length, '#d97706')}
-    ${createBar('Not Contacted', notContacted, DB.length, '#dc2626')}
+    ${createBar('Contacted', contacted, total, '#059669')}
+    ${createBar('Pending', pending, total, '#d97706')}
+    ${createBar('Not Contacted', notContacted, total, '#dc2626')}
   `;
 
-  // Result Bars
   const rToday = DB.filter(r => r.result === 'Contact Today').length;
   const rAgain = DB.filter(r => r.result === 'Contact Again').length;
   const rNoPot = DB.filter(r => r.result === 'No Potential').length;
 
   document.getElementById('result-bars').innerHTML = `
-    ${createBar('Potential Lead', potential, DB.length, '#1a56db')}
-    ${createBar('Contact Today', rToday, DB.length, '#7c3aed')}
-    ${createBar('Contact Again', rAgain, DB.length, '#db2777')}
-    ${createBar('No Potential', rNoPot, DB.length, '#9ca3af')}
+    ${createBar('Potential Lead', potential, total, '#1a56db')}
+    ${createBar('Contact Today', rToday, total, '#7c3aed')}
+    ${createBar('Contact Again', rAgain, total, '#db2777')}
+    ${createBar('No Potential', rNoPot, total, '#9ca3af')}
   `;
 }
 
@@ -277,8 +322,87 @@ function createBar(label, val, total, color) {
   `;
 }
 
-function openAdd() { document.getElementById('form-panel').style.display = 'flex'; }
-function closePanel() { document.getElementById('form-panel').style.display = 'none'; }
+// ฟังก์ชันเปิดฟอร์มเพื่อเพิ่มข้อมูลใหม่
+function openAdd() {
+  currentEditId = null;
+  document.getElementById('form-title').textContent = "เพิ่มลูกค้าใหม่";
+  document.getElementById('f-id').value = "";
+  document.getElementById('f-name').value = "";
+  document.getElementById('f-number').value = "";
+  document.getElementById('f-colB').value = "";
+  document.getElementById('f-status').value = "Not Contacted";
+  document.getElementById('f-result-select').value = "";
+  document.getElementById('f-result-custom').value = "";
+  document.getElementById('form-panel').style.display = 'flex';
+}
+
+// ฟังก์ชันเปิดฟอร์มเพื่อแก้ไขข้อมูล
+function editItem(id) {
+  const item = DB.find(r => r.id === id);
+  if (!item) return;
+
+  currentEditId = id;
+  document.getElementById('form-title').textContent = "แก้ไขข้อมูลลูกค้า";
+  document.getElementById('f-id').value = item.id;
+  document.getElementById('f-name').value = item.name || "";
+  document.getElementById('f-number').value = item.number || "";
+  document.getElementById('f-colB').value = item.colB || "";
+  document.getElementById('f-status').value = item.status || "Not Contacted";
+  
+  // จัดการข้อมูล Result
+  const standardResults = ["Potential Lead", "Contact Today", "Contact Again", "No Potential"];
+  if (standardResults.includes(item.result)) {
+    document.getElementById('f-result-select').value = item.result;
+    document.getElementById('f-result-custom').value = "";
+  } else {
+    document.getElementById('f-result-select').value = "";
+    document.getElementById('f-result-custom').value = item.result || "";
+  }
+  
+  document.getElementById('form-panel').style.display = 'flex';
+}
+
+function closePanel() { 
+  document.getElementById('form-panel').style.display = 'none'; 
+}
+
+function saveData() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('กรุณาระบุชื่อลูกค้า'); return; }
+
+  const resSelect = document.getElementById('f-result-select').value;
+  const resCustom = document.getElementById('f-result-custom').value.trim();
+  const finalResult = resCustom || resSelect;
+
+  const data = {
+    name: name,
+    number: document.getElementById('f-number').value,
+    colB: document.getElementById('f-colB').value,
+    status: document.getElementById('f-status').value,
+    result: finalResult
+  };
+
+  if (currentEditId) {
+    // โหมดแก้ไข
+    const index = DB.findIndex(r => r.id === currentEditId);
+    if (index !== -1) {
+      DB[index] = { ...DB[index], ...data };
+    }
+  } else {
+    // โหมดเพิ่มใหม่
+    const newItem = {
+      id: Date.now(),
+      ...data,
+      callT: 0,
+      callK: 0
+    };
+    DB.unshift(newItem); // เพิ่มไว้บนสุด
+  }
+
+  saveDB();
+  renderAll();
+  closePanel();
+}
 
 checkAuth();
 </script>
