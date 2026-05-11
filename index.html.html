@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CRM Call Manager</title>
+<!-- App Meta Tags -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a18">
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2906/2906274.png">
+
+<style>
+:root {
+  --bg: #f8f9fa;
+  --surface: #ffffff;
+  --border: #eeeeee;
+  --text: #1a1a1b;
+  --text-sec: #65676b;
+  --primary: #007bff;
+  --accent: #e7f3ff;
+  --danger: #dc3545;
+  --success: #28a745;
+  --safe-area-bottom: env(safe-area-inset-bottom);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
+  background: var(--bg); color: var(--text); margin: 0; padding: 0;
+  overscroll-behavior-y: contain;
+}
+
+/* App Header */
+.app-header {
+  position: sticky; top: 0; background: var(--surface);
+  padding: 16px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; z-index: 100;
+}
+.app-header h1 { font-size: 18px; font-weight: 700; margin: 0; }
+
+/* Main Content Area */
+.container { padding: 16px; padding-bottom: 100px; max-width: 800px; margin: 0 auto; }
+
+/* Bottom Navigation (Mobile) */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  display: flex; justify-content: space-around;
+  padding: 8px 0 calc(8px + var(--safe-area-bottom)); z-index: 1000;
+}
+.nav-item {
+  display: flex; flex-direction: column; align-items: center;
+  color: var(--text-sec); text-decoration: none; font-size: 10px; flex: 1;
+}
+.nav-item.active { color: var(--primary); }
+.nav-item .icon { font-size: 20px; margin-bottom: 4px; }
+
+/* Card Styling */
+.card {
+  background: var(--surface); border-radius: 12px;
+  padding: 16px; margin-bottom: 12px; border: 1px solid var(--border);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+/* List Style */
+.customer-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px; background: var(--surface); border-radius: 12px;
+  margin-bottom: 8px; border: 1px solid var(--border);
+}
+.cust-info { flex: 1; }
+.cust-name { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+.cust-meta { font-size: 12px; color: var(--text-sec); display: flex; gap: 8px; }
+
+/* Badge */
+.badge {
+  padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;
+  text-transform: uppercase;
+}
+.b-pending { background: #fff3cd; color: #856404; }
+.b-contacted { background: #d4edda; color: #155724; }
+.b-not { background: #f8d7da; color: #721c24; }
+
+/* Floating Action Button */
+.fab {
+  position: fixed; right: 20px; bottom: 85px;
+  width: 56px; height: 56px; background: var(--primary);
+  border-radius: 28px; display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 24px; box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+  border: none; cursor: pointer; z-index: 99;
+}
+
+/* Form Styles */
+.form-group { margin-bottom: 15px; }
+label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: var(--text-sec); }
+input, select, textarea {
+  width: 100%; padding: 12px; border: 1px solid var(--border);
+  border-radius: 8px; font-size: 15px; background: #fdfdfd;
+}
+
+/* Modal / Slide Up Panel */
+.panel {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: none; align-items: flex-end; z-index: 2000;
+}
+.panel.active { display: flex; }
+.panel-content {
+  background: white; width: 100%; max-height: 90vh;
+  border-top-left-radius: 20px; border-top-right-radius: 20px;
+  overflow-y: auto; padding: 20px;
+}
+
+/* Desktop Sidebar Hide */
+@media (min-width: 801px) {
+  .bottom-nav { width: 250px; flex-direction: column; height: 100vh; left: 0; border-right: 1px solid var(--border); border-top: none; justify-content: flex-start; padding-top: 50px; }
+  .container { margin-left: 270px; }
+  .app-header { margin-left: 250px; }
+}
+
+.search-bar {
+  background: white; padding: 10px 16px; position: sticky; top: 53px; z-index: 90;
+}
+.search-input { background: #f1f3f4; border: none; border-radius: 10px; padding: 10px 15px; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1 id="page-title">รายชื่อลูกค้า</h1>
+  <div style="font-size: 12px; color: var(--text-sec);" id="count-label">0 คน</div>
+</header>
+
+<div class="search-bar">
+  <input type="text" class="search-input" id="search" placeholder="🔍 ค้นหาชื่อ หรือ เบอร์โทร..." oninput="renderList()">
+</div>
+
+<main class="container">
+  <!-- List View -->
+  <div id="view-list" class="page">
+    <div id="list-container"></div>
+  </div>
+
+  <!-- Dash View -->
+  <div id="view-dash" class="page" style="display:none">
+    <div class="card">
+      <label>สรุปสถานะ</label>
+      <div id="dash-stats"></div>
+    </div>
+  </div>
+</main>
+
+<button class="fab" onclick="openAdd()">＋</button>
+
+<nav class="bottom-nav">
+  <a href="javascript:void(0)" class="nav-item active" onclick="switchPage('list', this)">
+    <span class="icon">📋</span><span>รายชื่อ</span>
+  </a>
+  <a href="javascript:void(0)" class="nav-item" onclick="switchPage('dash', this)">
+    <span class="icon">📊</span><span>แดชบอร์ด</span>
+  </a>
+</nav>
+
+<!-- Panel For Add/Edit -->
+<div class="panel" id="form-panel">
+  <div class="panel-content">
+    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+      <h2 style="margin:0; font-size:18px;" id="form-title">เพิ่มข้อมูล</h2>
+      <button onclick="closePanel()" style="border:none; background:none; font-size:20px;">✕</button>
+    </div>
+    <div id="form-body">
+      <!-- Form content injected by JS -->
+    </div>
+    <div style="margin-top:20px; display:flex; gap:10px;">
+      <button class="btn-save" onclick="saveData()" style="flex:1; padding:15px; background:var(--primary); color:white; border:none; border-radius:10px; font-weight:700;">บันทึกข้อมูล</button>
+    </div>
+    <div style="height: 30px;"></div>
+  </div>
+</div>
+
+<script>
+// ข้อมูลตั้งต้น (ย่อส่วนจาก SEED เดิม)
+let DB = JSON.parse(localStorage.getItem('crm_mobile_v1')) || [
+  {id:1, name:"Rudeemas Pangputhipong", phone:"0819383232", status:"Not Contacted", feedback:"ไม่รับสาย", sheet:"S1"},
+  {id:2, name:"บ้านสวน คำม่อง", phone:"0834582189", status:"Contacted", feedback:"สนใจเครื่องเล็ก", sheet:"S1"}
+];
+
+let editingId = null;
+
+function saveDB() {
+  localStorage.setItem('crm_mobile_v1', JSON.stringify(DB));
+}
+
+function switchPage(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  document.getElementById('view-' + page).style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('page-title').textContent = page === 'list' ? 'รายชื่อลูกค้า' : 'ภาพรวมระบบ';
+  if(page === 'dash') renderDash();
+}
+
+function renderList() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const container = document.getElementById('list-container');
+  const filtered = DB.filter(r => r.name.toLowerCase().includes(q) || r.phone.includes(q));
+  
+  document.getElementById('count-label').textContent = filtered.length + ' รายการ';
+  
+  container.innerHTML = filtered.map(r => `
+    <div class="customer-item" onclick="openEdit(${r.id})">
+      <div class="cust-info">
+        <div class="cust-name">${r.name}</div>
+        <div class="cust-meta">
+          <span>📞 ${r.phone}</span>
+          <span class="badge ${getStatusClass(r.status)}">${r.status}</span>
+        </div>
+      </div>
+      <div style="color:#ccc">❯</div>
+    </div>
+  `).join('');
+}
+
+function getStatusClass(s) {
+  if(s === 'Contacted') return 'b-contacted';
+  if(s === 'Pending') return 'b-pending';
+  return 'b-not';
+}
+
+function openAdd() {
+  editingId = null;
+  document.getElementById('form-title').textContent = "เพิ่มลูกค้าใหม่";
+  showForm({name:'', phone:'', status:'Not Contacted', feedback:''});
+}
+
+function openEdit(id) {
+  editingId = id;
+  const data = DB.find(r => r.id === id);
+  document.getElementById('form-title').textContent = "แก้ไขข้อมูล";
+  showForm(data);
+}
+
+function showForm(data) {
+  const body = document.getElementById('form-body');
+  body.innerHTML = `
+    <div class="form-group">
+      <label>ชื่อลูกค้า</label>
+      <input type="text" id="f-name" value="${data.name}">
+    </div>
+    <div class="form-group">
+      <label>เบอร์โทรศัพท์</label>
+      <input type="tel" id="f-phone" value="${data.phone}">
+    </div>
+    <div class="form-group">
+      <label>สถานะ</label>
+      <select id="f-status">
+        <option ${data.status==='Not Contacted'?'selected':''}>Not Contacted</option>
+        <option ${data.status==='Pending'?'selected':''}>Pending</option>
+        <option ${data.status==='Contacted'?'selected':''}>Contacted</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>บันทึกการคุย</label>
+      <textarea id="f-feedback" rows="3">${data.feedback}</textarea>
+    </div>
+    ${editingId ? `<button onclick="deleteData(${data.id})" style="width:100%; padding:10px; color:red; border:1px solid red; background:none; border-radius:10px; margin-top:10px;">ลบข้อมูล</button>` : ''}
+  `;
+  document.getElementById('form-panel').classList.add('active');
+}
+
+function saveData() {
+  const name = document.getElementById('f-name').value;
+  if(!name) return alert('กรุณาระบุชื่อ');
+  
+  const payload = {
+    id: editingId || Date.now(),
+    name: name,
+    phone: document.getElementById('f-phone').value,
+    status: document.getElementById('f-status').value,
+    feedback: document.getElementById('f-feedback').value,
+    sheet: 'S1'
+  };
+
+  if(editingId) {
+    const idx = DB.findIndex(r => r.id === editingId);
+    DB[idx] = payload;
+  } else {
+    DB.unshift(payload);
+  }
+  
+  saveDB();
+  renderList();
+  closePanel();
+}
+
+function deleteData(id) {
+  if(confirm('ยืนยันการลบ?')) {
+    DB = DB.filter(r => r.id !== id);
+    saveDB();
+    renderList();
+    closePanel();
+  }
+}
+
+function renderDash() {
+  const contacted = DB.filter(r => r.status === 'Contacted').length;
+  const pending = DB.filter(r => r.status === 'Pending').length;
+  const total = DB.length;
+
+  document.getElementById('dash-stats').innerHTML = `
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+      <div style="background:#e7f3ff; padding:15px; border-radius:10px; text-align:center;">
+        <div style="font-size:24px; font-weight:bold; color:#007bff">${total}</div>
+        <div style="font-size:12px;">ลูกค้าทั้งหมด</div>
+      </div>
+      <div style="background:#d4edda; padding:15px; border-radius:10px; text-align:center;">
+        <div style="font-size:24px; font-weight:bold; color:#28a745">${contacted}</div>
+        <div style="font-size:12px;">ติดต่อแล้ว</div>
+      </div>
+    </div>
+  `;
+}
+
+function closePanel() { document.getElementById('form-panel').classList.remove('active'); }
+
+// Init
+renderList();
+</script>
+
+</body>
+</html>
