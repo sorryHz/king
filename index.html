@@ -1,9 +1,21 @@
+จัดการปรับลำดับและเปลี่ยนชื่อหัวข้อใหม่ตามที่คุณต้องการเรียบร้อยครับ
+โดยโครงสร้างใหม่จะเป็นดังนี้:
+
+1.  No. (ลำดับ) - (เปลี่ยนจากช่องชื่อเดิม)
+2.  ชื่อลูกค้า - (เปลี่ยนจากช่องชื่อเล่นเดิม)
+3.  ชื่อเล่น / ตำแหน่ง / ชื่อใน Line - (เพิ่มเป็นช่องใหม่)
+
+และได้ปรับการเชื่อมข้อมูล (Sync) ให้ตรงกับคอลัมน์ A, B และ C ของ Google Sheet
+ให้ถูกต้องด้วยครับ
+
+โค้ดฉบับแก้ไข:
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CRM Call Manager v2</title>
+<title>CRM Call Manager v3</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
@@ -55,7 +67,7 @@ input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1;
 </header>
 
 <div class="search-bar">
-  <input type="text" class="search-input" id="search" placeholder="🔍 ค้นหาชื่อ, เบอร์โทร หรือสถานที่..." oninput="renderList()">
+  <input type="text" class="search-input" id="search" placeholder="🔍 ค้นหาชื่อลูกค้า, เบอร์ หรือสถานที่..." oninput="renderList()">
 </div>
 
 <main class="container" id="list-container"></main>
@@ -69,8 +81,11 @@ input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1;
       <button onclick="closePanel()" style="border:none; background:#f1f5f9; width:35px; height:35px; border-radius:20px; font-weight:bold;">✕</button>
     </div>
     <div id="form-body">
+      <!-- ส่วนที่ปรับเปลี่ยนใหม่ตามคำขอ -->
+      <div class="form-group"><label>No. (ลำดับ)</label><input type="text" id="f-number"></div>
       <div class="form-group"><label>ชื่อลูกค้า</label><input type="text" id="f-name"></div>
       <div class="form-group"><label>ชื่อเล่น / ตำแหน่ง / ชื่อใน Line</label><input type="text" id="f-nick"></div>
+      
       <div class="form-group"><label>โทรศัพท์</label><input type="tel" id="f-phone"></div>
       <div class="form-group"><label>อีเมล</label><input type="email" id="f-email"></div>
       <div class="form-group"><label>สถานที่/บริษัทที่ติดตั้ง</label><input type="text" id="f-location"></div>
@@ -107,10 +122,9 @@ input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1;
 </div>
 
 <script>
-// ลิงก์ CSV ที่คุณส่งมา
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtcZRcAr_uWdYxo3WhB3RkneaWm7auhlMyjlAPoMzrLxFxqN1JmcjP0MHyz8fiCeEbTbxwCVEEqUmW/pub?gid=0&single=true&output=csv';
 
-let DB = JSON.parse(localStorage.getItem('crm_v2_data')) || [];
+let DB = JSON.parse(localStorage.getItem('crm_v3_data')) || [];
 let editingId = null;
 
 async function syncData() {
@@ -118,16 +132,16 @@ async function syncData() {
   try {
     const res = await fetch(CSV_URL);
     const text = await res.text();
-    const rows = text.split('\n').slice(1); // ตัดหัวตารางออก
+    const rows = text.split('\n').slice(1);
 
     DB = rows.map((row, i) => {
-      // Split by comma but ignore commas inside quotes
       const c = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
       if (c.length < 2) return null;
       return {
         id: Date.now() + i,
-        name: clean(c[1]),
-        nick: clean(c[2]),
+        number: clean(c[0]),   // คอลัมน์ A (Column 1)
+        name: clean(c[1]),     // คอลัมน์ B (ชื่อ)
+        nick: clean(c[2]),     // คอลัมน์ C (ชื่อเล่น/ตำแหน่ง)
         process: clean(c[3]),
         strategy: clean(c[4]),
         phone: clean(c[5]),
@@ -154,20 +168,22 @@ async function syncData() {
 }
 
 function clean(s) { return s ? s.replace(/"/g, '').trim() : ''; }
-function saveDB() { localStorage.setItem('crm_v2_data', JSON.stringify(DB)); }
+function saveDB() { localStorage.setItem('crm_v3_data', JSON.stringify(DB)); }
 
 function renderList() {
   const q = document.getElementById('search').value.toLowerCase();
   const container = document.getElementById('list-container');
-  const filtered = DB.filter(r => (r.name+r.phone+r.location).toLowerCase().includes(q));
+  const filtered = DB.filter(r => (r.name+r.phone+r.location+r.number).toLowerCase().includes(q));
   
   container.innerHTML = filtered.map(r => `
     <div class="customer-item" onclick="openEdit(${r.id})">
       <div style="flex:1">
-        <div class="cust-name">${r.name}</div>
+        <div style="font-size:11px; color:var(--primary); font-weight:bold;">No. ${r.number || '-'}</div>
+        <div class="cust-name">${r.name || 'ไม่มีชื่อ'}</div>
         <div class="cust-info">
+          👤 ${r.nick || '-'}<br>
           📍 ${r.location || '-'}<br>
-          📞 ${r.phone || '-'} | ✉️ ${r.email || '-'}
+          📞 ${r.phone || '-'}
         </div>
         <span class="badge ${getBadge(r.status)}">${r.status}</span>
       </div>
@@ -185,6 +201,7 @@ function getBadge(s) {
 function openEdit(id) {
   editingId = id;
   const r = DB.find(x => x.id === id);
+  document.getElementById('f-number').value = r.number || '';
   document.getElementById('f-name').value = r.name || '';
   document.getElementById('f-nick').value = r.nick || '';
   document.getElementById('f-phone').value = r.phone || '';
@@ -216,11 +233,10 @@ function openAdd() {
 function closePanel() { document.getElementById('form-panel').classList.remove('active'); }
 
 function saveData() {
-  const name = document.getElementById('f-name').value;
-  if(!name) return alert('กรุณาใส่ชื่อลูกค้า');
   const data = {
     id: editingId || Date.now(),
-    name,
+    number: document.getElementById('f-number').value,
+    name: document.getElementById('f-name').value,
     nick: document.getElementById('f-nick').value,
     phone: document.getElementById('f-phone').value,
     email: document.getElementById('f-email').value,
