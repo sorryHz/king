@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CRM PRO - Data Mapping v5</title>
+<title>CRM PRO - Update Label v7</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
@@ -92,7 +92,7 @@ input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1;
   </header>
 
   <div class="search-bar">
-    <input type="text" class="search-input" id="search" placeholder="🔍 ค้นหาชื่อลูกค้า หรือข้อมูลอื่นๆ..." oninput="renderList()">
+    <input type="text" class="search-input" id="search" placeholder="🔍 ค้นหาชื่อ หรือ วันที่..." oninput="renderList()">
   </div>
 
   <main class="container" id="list-container"></main>
@@ -106,10 +106,12 @@ input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1;
         <button onclick="closePanel()" style="border:none; background:#f1f5f9; width:35px; height:35px; border-radius:20px;">✕</button>
       </div>
       <div id="form-body">
-        <div class="form-group"><label>ชื่อลูกค้า (จาก Col C)</label><input type="text" id="f-name"></div>
-        <div class="form-group"><label>ชื่อเล่น / ตำแหน่ง / ชื่อใน Line (จาก Col D)</label><input type="text" id="f-nick"></div>
-        <div class="form-group"><label>No. (ลำดับ จาก Col A)</label><input type="text" id="f-number"></div>
-        <div class="form-group"><label>ข้อมูลคอลัมน์ B</label><input type="text" id="f-colB"></div>
+        <div class="form-group"><label>ชื่อลูกค้า (Col C)</label><input type="text" id="f-name"></div>
+        <div class="form-group"><label>DD/MM/YYYY (Col A)</label><input type="text" id="f-number"></div>
+        <div class="form-group"><label>ชื่อเล่น / ตำแหน่ง / ชื่อใน Line (Col D)</label><input type="text" id="f-nick"></div>
+        
+        <!-- เปลี่ยนชื่อจาก ข้อมูลคอลัมน์ B เป็น ลำดับ -->
+        <div class="form-group"><label>ลำดับ (Col B)</label><input type="text" id="f-colB"></div>
         
         <div class="form-group"><label>โทรศัพท์</label><input type="tel" id="f-phone"></div>
         <div class="form-group"><label>อีเมล</label><input type="email" id="f-email"></div>
@@ -134,7 +136,7 @@ input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1;
           <div class="form-group" style="flex:1;"><label>โทร (K)</label><input type="number" id="f-callK"></div>
         </div>
         
-        <div class="form-group"><label>Feedback / บันทึกการคุย</label><textarea id="f-feedback" rows="3"></textarea></div>
+        <div class="form-group"><label>Feedback</label><textarea id="f-feedback" rows="3"></textarea></div>
         <div class="form-group"><label>Process</label><textarea id="f-process" rows="2"></textarea></div>
         <div class="form-group"><label>Strategy</label><textarea id="f-strategy" rows="2"></textarea></div>
         <div class="form-group"><label>Following 1</label><input type="text" id="f-follow1"></div>
@@ -148,7 +150,7 @@ input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1;
 </div>
 
 <script>
-// --- Auth ---
+// --- Auth Config ---
 const AUTH_CONFIG = { user: 'admin', pass: '1234' };
 function handleLogin() {
   const u = document.getElementById('user-input').value;
@@ -167,13 +169,13 @@ function checkAuth() {
   }
 }
 
-// --- Data & Sync ---
+// --- CSV Sync Logic ---
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQtcZRcAr_uWdYxo3WhB3RkneaWm7auhlMyjlAPoMzrLxFxqN1JmcjP0MHyz8fiCeEbTbxwCVEEqUmW/pub?gid=0&single=true&output=csv';
-let DB = JSON.parse(localStorage.getItem('crm_v5_data')) || [];
+let DB = JSON.parse(localStorage.getItem('crm_v7_data')) || [];
 let editingId = null;
 
 async function syncData() {
-  if(!confirm('ดึงข้อมูลจาก Google Sheet? ข้อมูลเดิมในแอปจะถูกเขียนทับ')) return;
+  if(!confirm('ดึงข้อมูลจาก Google Sheet?')) return;
   try {
     const res = await fetch(CSV_URL);
     const text = await res.text();
@@ -182,14 +184,12 @@ async function syncData() {
     DB = rows.map((row, i) => {
       const c = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
       if (c.length < 4) return null;
-      
-      // การ Mapping ใหม่ตามคำขอ
       return {
         id: Date.now() + i,
-        number: clean(c[0]),   // Col A
-        colB: clean(c[1]),     // Col B (เก็บไว้ดูเผื่อเลือก)
-        name: clean(c[2]),     // Col C -> ให้เป็น "ชื่อลูกค้า"
-        nick: clean(c[3]),     // Col D -> ให้เป็น "ชื่อเล่น/ตำแหน่ง/Line"
+        number: clean(c[0]),   // Col A (DD/MM/YYYY)
+        colB: clean(c[1]),     // Col B (ลำดับ)
+        name: clean(c[2]),     // Col C (ชื่อลูกค้า)
+        nick: clean(c[3]),     // Col D (ชื่อเล่น/ตำแหน่ง/Line)
         process: clean(c[4]),  // Col E
         strategy: clean(c[5]), // Col F
         phone: clean(c[6]),    // Col G
@@ -198,36 +198,37 @@ async function syncData() {
         location: clean(c[9]), // Col J
         avail: clean(c[10]),   // Col K
         email: clean(c[11]),   // Col L
-        status: clean(c[12]) || 'Not Contacted', // Col M
-        result: clean(c[13]),  // Col N
-        callT: parseInt(c[14]) || 0, // Col O
-        callK: parseInt(c[15]) || 0, // Col P
-        feedback: clean(c[17]), // Col R (ข้าม Totals ที่ Q)
-        col2: clean(c[18]),    // Col S
-        follow1: clean(c[19]), // Col T
-        follow3: clean(c[20])  // Col U
+        status: clean(c[12]) || 'Not Contacted',
+        result: clean(c[13]),
+        callT: parseInt(c[14]) || 0,
+        callK: parseInt(c[15]) || 0,
+        feedback: clean(c[17]),
+        col2: clean(c[18]),
+        follow1: clean(c[19]),
+        follow3: clean(c[20])
       };
     }).filter(x => x !== null);
     
-    saveDB(); renderList(); alert('สำเร็จ! ดึงข้อมูลมา ' + DB.length + ' รายการ');
+    saveDB(); renderList(); alert('สำเร็จ! ดึงมา ' + DB.length + ' รายการ');
   } catch (e) { alert('ข้อผิดพลาด: ' + e.message); }
 }
 
 function clean(s) { return s ? s.replace(/"/g, '').trim() : ''; }
-function saveDB() { localStorage.setItem('crm_v5_data', JSON.stringify(DB)); }
+function saveDB() { localStorage.setItem('crm_v7_data', JSON.stringify(DB)); }
 
 function renderList() {
   const q = document.getElementById('search').value.toLowerCase();
   const container = document.getElementById('list-container');
-  const filtered = DB.filter(r => (r.name+r.nick+r.phone+r.location).toLowerCase().includes(q));
+  const filtered = DB.filter(r => (r.name+r.number+r.phone+r.location+r.colB).toLowerCase().includes(q));
   
   container.innerHTML = filtered.map(r => `
     <div class="customer-item" onclick="openEdit(${r.id})">
       <div style="flex:1">
-        <div class="cust-name">${r.name || 'ไม่มีชื่อ (Col C)'}</div>
+        <div class="cust-name">${r.name || 'ไม่มีชื่อ'}</div>
         <div class="cust-info">
-          👤 ${r.nick || '-'}<br>
-          🆔 ลำดับ: ${r.number || '-'}<br>
+          🔢 ลำดับ: ${r.colB || '-'}<br>
+          📅 วันที่: ${r.number || '-'}<br>
+          👤 Line: ${r.nick || '-'}<br>
           📍 ${r.location || '-'}<br>
           📞 ${r.phone || '-'}
         </div>
@@ -248,8 +249,8 @@ function openEdit(id) {
   editingId = id;
   const r = DB.find(x => x.id === id);
   document.getElementById('f-name').value = r.name || '';
-  document.getElementById('f-nick').value = r.nick || '';
   document.getElementById('f-number').value = r.number || '';
+  document.getElementById('f-nick').value = r.nick || '';
   document.getElementById('f-colB').value = r.colB || '';
   document.getElementById('f-phone').value = r.phone || '';
   document.getElementById('f-email').value = r.email || '';
@@ -283,8 +284,8 @@ function saveData() {
   const data = {
     id: editingId || Date.now(),
     name: document.getElementById('f-name').value,
-    nick: document.getElementById('f-nick').value,
     number: document.getElementById('f-number').value,
+    nick: document.getElementById('f-nick').value,
     colB: document.getElementById('f-colB').value,
     phone: document.getElementById('f-phone').value,
     email: document.getElementById('f-email').value,
